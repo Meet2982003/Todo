@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  postgres:
+  todoapp_db:
     image: postgres:15-alpine
     container_name: todoapp_db
     environment:
@@ -14,9 +12,35 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    networks:
+      - todoapp_network
+
+  todo-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: todo_backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://todoapp_db:5432/todoapp
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "5025:5025"
+    depends_on:
+      todoapp_db:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - todoapp_network
+
+networks:
+  todoapp_network:
+    driver: bridge
 
 volumes:
   postgres_data:
